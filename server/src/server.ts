@@ -12,6 +12,37 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
+// /server/src/server.ts 内に追加
+
+// 有効な単語文字の正規表現 (C/GASマクロ名として有効な文字)
+const WORD_REGEX = /[a-zA-Z0-9_]+/g;
+
+// カーソル位置にある単語の範囲を計算するヘルパー関数
+function getWordRangeAtPosition(document: TextDocument, position: { line: number, character: number }): { word: string, start: number, end: number } | null {
+    const lineText = document.getText({ start: { line: position.line, character: 0 }, end: { line: position.line, character: 99999 } });
+    
+    // カーソル位置のオフセット (その行の先頭からの文字数)
+    const cursorChar = position.character;
+
+    let match: RegExpExecArray | null;
+    
+    // 行全体で単語を検索
+    while ((match = WORD_REGEX.exec(lineText)) !== null) {
+        const wordStart = match.index;
+        const wordEnd = match.index + match[0].length;
+        
+        // カーソルが単語の範囲内にあるかチェック
+        if (cursorChar >= wordStart && cursorChar <= wordEnd) {
+            return {
+                word: match[0],
+                start: wordStart,
+                end: wordEnd
+            };
+        }
+    }
+    return null;
+}
+
 // LSP接続の作成
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -19,6 +50,7 @@ const connection: Connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 connection.onInitialize(() => {
+	
   return {
     capabilities: {
       // ドキュメント同期機能 (テキスト変更を通知)
@@ -54,12 +86,12 @@ connection.onHover((params: TextDocumentPositionParams): Hover | null => {
   const offset = document.offsetAt(params.position);
   const text = document.getText();
   
-  // 現在のカーソル位置の単語を取得
-  const wordRange = document.getWordRangeAtPosition(params.position);
-  if (!wordRange) {
+  // 現在のカーソル位置の単語を取得// ★ 修正箇所：新しいヘルパー関数を使用 ★
+  const wordResult = getWordRangeAtPosition(document, params.position);
+  if (!wordResult) {
     return null;
   }
-  const word = document.getText(wordRange);
+  const word = wordResult.word;
 
   // ドキュメント全体からマクロ定義を解析
   const defines = parseDefines(text);

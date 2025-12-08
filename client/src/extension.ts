@@ -10,10 +10,13 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
+	
   // サーバーモジュールの絶対パス
   const serverModule = context.asAbsolutePath(
     path.join('server', 'out', 'server.js')
   );
+
+	console.log(serverModule)
 
   // デバッグ用オプション
   const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
@@ -27,7 +30,7 @@ export function activate(context: ExtensionContext) {
   // クライアント起動オプション
   const clientOptions: LanguageClientOptions = {
     // サーバーに送信する言語ドキュメントを定義
-    documentSelector: [{ scheme: 'file', language: 'gas-custom' }],
+    documentSelector: [{ scheme: 'file', language: 'gas' }],
     // サーバーのログ出力をVS CodeのOutput Channelにリダイレクト
     outputChannelName: 'GAS Macro LSP'
   };
