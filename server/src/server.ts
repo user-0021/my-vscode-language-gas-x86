@@ -26,7 +26,7 @@ import { WORD_REGISTERS, WORD_OPCODES } from './define';
 // /server/src/server.ts 内に追加
 
 
-const tokenTypes = ['macro']; 
+const tokenTypes = ['macro','function']; 
 const tokenModifiers = [];
 
 //connection object
@@ -56,7 +56,7 @@ function updateMacroCache(uri: string, text: string) {
         defines[match[1]] = match[2].trim();
     }
 
-    // 2. インクルードパスの抽出と解決
+    // parse include 
     const includes: string[] = [];
     const includeRegex = /^#\s*include\s+["<](.*?\.(?:h|inc))[">]/gm;
     const currentFilePath = URI.parse(uri).fsPath;
@@ -216,7 +216,7 @@ connection.onDidChangeConfiguration(change => {
         // ★ 追加手順 2: 現在開いているファイルのみ、新しい設定ですぐに再解析する
         // これをやらないと、ユーザーがファイルを編集するまでキャッシュが空のままになってしまいます
         documents.all().forEach(doc => {
-            updateCache(doc.uri, doc.getText());
+            updateMacroCache(doc.uri, doc.getText());
         });
 
         connection.languages.semanticTokens.refresh();
@@ -259,20 +259,6 @@ function getWordRangeAtPosition(document: TextDocument, position: { line: number
     }
     return null;
 }
-const includeRegex = /^#\s*include\s+["<](.*)[">]/gm;
-
-/**
- * 指定されたテキストからローカルのマクロ定義のみを抽出する（ファイル読み込みなし）
- */
-function extractMacrosFromText(text: string): { [key: string]: string } {
-    const defines: { [key: string]: string } = {};
-    const defineRegex = /^#\s*define\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(.*)/gm;
-    let match: RegExpExecArray | null;
-    while ((match = defineRegex.exec(text)) !== null) {
-        defines[match[1]] = match[2].trim();
-    }
-    return defines;
-}
 
 // ファイルシステム上の変更（作成・変更・削除）を検知
 connection.onDidChangeWatchedFiles((change: DidChangeWatchedFilesParams) => {
@@ -294,7 +280,7 @@ connection.onDidChangeWatchedFiles((change: DidChangeWatchedFilesParams) => {
             // 次回必要になったときに読み直させる
             
             // ※ 開いているファイルの場合、onDidChangeContent が先に走って
-            // updateCache されているので、ここでは何もしなくてOK（または念のため削除でも可）
+            // updateMacroCache されているので、ここでは何もしなくてOK（または念のため削除でも可）
             if (macroCache.has(event.uri)) {
                 macroCache.delete(event.uri);
                 connection.console.log(`[Cache] File changed externally, invalidated: ${event.uri}`);
@@ -324,7 +310,7 @@ function getAllDefines(uri: string, visited = new Set<string>()): { [key: string
         if (fs.existsSync(filePath)) {
             try {
                 const text = fs.readFileSync(filePath, 'utf-8');
-                updateCache(uri, text); // ここでキャッシュを作る
+                updateMacroCache(uri, text); // ここでキャッシュを作る
                 cached = macroCache.get(uri);
             } catch (e) {
                 console.error(`Read error: ${filePath}`);
@@ -381,58 +367,61 @@ connection.onHover((params: TextDocumentPositionParams): Hover | null => {
   }
 
   return null;
-});// --- 5. セマンティック・トークンの実装 (核となる機能) ---
-
-connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
-    const document = documents.get(params.textDocument.uri);
-    if (!document) {
-        return { data: [] };
-    }
-
-    // トークンデータを構築するビルダー
-    const builder = new SemanticTokensBuilder();
-    const text = document.getText();
-    
-    // 現在のドキュメントで定義されているマクロ名を解析
-    const defines = getAllDefines(document.uri);
-    const definedMacroNames = Object.keys(defines);
-
-    // ドキュメント全体からすべての単語を抽出し、それが定義済みマクロ名かチェックする
-    const allWordsRegex = /[a-zA-Z_][a-zA-Z0-9_]+/g;
-    let match: RegExpExecArray | null;
-    let line = 0;
-
-    while ((match = allWordsRegex.exec(text)) !== null) {
-        // トークンの位置を計算
-        const range: Range = {
-            start: document.positionAt(match.index),
-            end: document.positionAt(match.index + match[0].length)
-        };
-        const word = match[0];
-        
-        // トークンが新しい行にある場合、行番号を更新
-        while (range.start.line > line) {
-            line++;
-        }
-
-        // ★ 定義済みマクロ名との照合 ★
-        if (definedMacroNames.includes(word) && !word.startsWith("#")) {
-            // トークンが定義済みマクロ名リストに存在する場合、トークンとして追加
-            // パラメータ: line (差分行), char (列), length (長さ), tokenType (インデックス), tokenModifiers (ビットマスク)
-            builder.push(
-                range.start.line, 
-                range.start.character, 
-                word.length, 
-                tokenTypes.indexOf('macro'), // 'macro' タイプを使用
-                0 // モディファイアなし
-            );
-        }
-    }
-
-    return builder.build(); // トークンデータをVS Codeに返却
 });
 
-// ドキュメントの内容変更を監視し、LSP接続を開始
+// Senmatuc tokens
+connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
+	// get document
+	const document = documents.get(params.textDocument.uri);
+	if (!document) {
+			return { data: [] };
+	}
+
+	// init builder
+	const builder = new SemanticTokensBuilder();
+	const text = document.getText();
+	
+	// get cache
+	const defines = getAllDefines(document.uri);
+	const definedMacroNames = Object.keys(defines);
+
+	// ドキュメント全体からすべての単語を抽出し、それが定義済みマクロ名かチェックする
+	const allWordsRegex = /[a-zA-Z_][a-zA-Z0-9_]*/g;
+	let match: RegExpExecArray | null;
+	let line = 0;
+
+	while ((match = allWordsRegex.exec(text)) !== null) {
+			// トークンの位置を計算
+			const range: Range = {
+					start: document.positionAt(match.index),
+					end: document.positionAt(match.index + match[0].length)
+			};
+			const word = match[0];
+			
+			// トークンが新しい行にある場合、行番号を更新
+			while (range.start.line > line) {
+					line++;
+			}
+
+			// ★ 定義済みマクロ名との照合 ★
+			if (definedMacroNames.includes(word) && !word.startsWith("#")) {
+					// トークンが定義済みマクロ名リストに存在する場合、トークンとして追加
+					// パラメータ: line (差分行), char (列), length (長さ), tokenType (インデックス), tokenModifiers (ビットマスク)
+					builder.push(
+							range.start.line, 
+							range.start.character, 
+							word.length, 
+							tokenTypes.indexOf('macro'), // 'macro' タイプを使用
+							0 // モディファイアなし
+					);
+			}
+	}
+
+	//build
+	return builder.build();
+});
+
+// lunch
 documents.listen(connection);
 connection.listen();
 
