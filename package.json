@@ -1,54 +1,77 @@
 {
-    "name": "my-language-gas-x86",
-    "displayName": "GNU Assembler Language Support",
-    "description": "GNU Assembler x86/x86_64 language support",
-    "version": "0.1.2",
-    "license": "MIT",
-    "publisher": "basdp",
-    "repository": {
-        "url": "https://github.com/user-0021/my-vscode-language-gas-x86#.git"
-    },
-    "engines": {
-        "vscode": "^1.0.0"
-    },
-    "categories": [
-        "Programming Languages"
-    ],
-    "main": "./client/out/extension.js",
-    "contributes": {
-        "languages": [
-            {
-                "id": "gas",
-                "aliases": [
-                    "GAS/AT&T x86/x64",
-                    "gas"
-                ],
-                "extensions": [
-                    ".s",
-                    ".S",
-                    ".sx",
-                    ".asm"
-                ],
-                "configuration": "./language-configuration.json"
-            }
-        ],
-        "grammars": [
-            {
-                "language": "gas",
-                "scopeName": "source.x86",
-                "path": "./syntaxes/gas.tmLanguage"
-            }
-        ]
-    },
-    "icon": "logo.png",
-    "dependencies": {
-        "typescript": "^5.9.3",
-        "vscode-languageclient": "^9.0.1",
-        "vscode-languageserver": "^9.0.1",
-        "vscode-languageserver-textdocument": "^1.0.12"
-    },
-    "devDependencies": {
-        "@types/node": "^24.10.1",
-        "@types/vscode": "^1.106.1"
-    }
+	"name": "my-language-gas-x86",
+	"displayName": "GNU Assembler Language Support",
+	"description": "GNU Assembler x86/x86_64 language support",
+	"version": "0.1.2",
+	"license": "MIT",
+	"publisher": "basdp",
+	"repository": {
+		"url": "https://github.com/user-0021/my-vscode-language-gas-x86#.git"
+	},
+	"engines": {
+		"vscode": "^1.0.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"main": "./client/out/extension.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "gas",
+				"aliases": [
+					"GAS/AT&T x86/x64",
+					"gas"
+				],
+				"extensions": [
+					".s",
+					".S",
+					".sx",
+					".asm"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "gas",
+				"scopeName": "source.x86",
+				"path": "./syntaxes/gas.tmLanguage"
+			}
+		],
+		"semanticTokenTypes": [
+			{
+				"id": "macro",
+				"superType": "variable",
+				"description": "C Preprocessor Macro names"
+			}
+		]
+	},
+	"icon": "logo.png",
+	"dependencies": {
+		"typescript": "^5.9.3",
+		"vscode-languageclient": "^9.0.1",
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.12",
+		"vscode-uri": "^3.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1",
+		"@types/vscode": "^1.106.1"
+	},
+	"configuration": {
+		"type": "object",
+		"title": "GAS Macro LSP Configuration",
+		"properties": {
+			"gasMacroLsp.includePaths": {
+				"scope": "resource",
+				"type": "array",
+				"items": {
+					"type": "string"
+				},
+				"default": [],
+				"description": "Additional paths to search for included files (like -I option)."
+			}
+		}
+	}
 }
