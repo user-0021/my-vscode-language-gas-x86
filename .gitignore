@@ -1,4 +1,4 @@
-
+tsconfig.tsbuildinfo
 *.vsix
 node_modules
 */out/*
