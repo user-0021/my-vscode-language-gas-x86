@@ -1,1 +1,1 @@
-{"root":["./client/out/extension.d.ts","./client/src/extension.ts","./server/out/define.d.ts","./server/out/server.d.ts","./server/src/define.ts","./server/src/server.ts"],"version":"5.9.3"}
+{"root":["./client/out/extension.d.ts","./client/src/extension.ts","./server/out/define.d.ts","./server/out/server.d.ts","./server/out/syntaxCacher.d.ts","./server/src/define.ts","./server/src/server.ts","./server/src/syntaxCacher.ts"],"version":"5.9.3"}
