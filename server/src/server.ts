@@ -6,25 +6,27 @@ import {
   Connection,
   TextDocumentPositionParams,
   Hover,
-  SemanticTokensBuilder, // TS2304 (SemanticTokensBuilder) を修正
-  SemanticTokensParams,  // TS2304 (SemanticTokensParams) を修正
-  Range,                 // Rangeの型をインポート
+  SemanticTokensBuilder, 
+  SemanticTokensParams,
+  Range,            
   MarkupContent,
   MarkupKind,
   CompletionItem,
   CompletionItemKind,
-  FileChangeType, // ★追加
-  DidChangeWatchedFilesParams // ★追加
+  FileChangeType, 
+  DidChangeWatchedFilesParams ,
+	Location,
+	DefinitionParams
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import * as path from 'path';
 import { URI } from 'vscode-uri'; // URI変換用
-import { WORD_REGISTERS, WORD_OPCODES } from './define';
-import { symbolTable, SyntaxCacher } from './syntaxCacher';
+import { REGISTERS, OPCODES , COMPLETION_ITEMS_REGISTER, COMPLETION_ITEMS_OPCODE } from './define';
+import { SyntaxCacher } from './syntaxCacher';
 
 
-const tokenTypes = ['macro','interface']; 
+const tokenTypes = ['macro','variable']; 
 const tokenModifiers:string[] = [];
 
 //connection object
@@ -56,6 +58,8 @@ connection.onInitialize((params) => {
 	  textDocumentSync: TextDocumentSyncKind.Full,
 	  // Hover support
 	  hoverProvider: true,
+		//definition jump support
+		definitionProvider: true,
 	  // Completion support
 	  completionProvider: {
 		resolveProvider: false
@@ -74,16 +78,8 @@ connection.onInitialize((params) => {
 
 // Completion Item List
 const staticCompletionItems: CompletionItem[] = [
-	...WORD_REGISTERS.map(reg => ({
-		label: reg,
-		kind: CompletionItemKind.Variable,
-		detail: 'Register'
-	})),
-	...WORD_OPCODES.map(inst => ({
-		label: inst,
-		kind: CompletionItemKind.Keyword, 
-		detail: 'Instruction'
-	}))
+	...COMPLETION_ITEMS_REGISTER,
+	...COMPLETION_ITEMS_OPCODE
 ];
 
 
@@ -112,20 +108,20 @@ connection.onCompletion(
 		});
 
 		// export label data
-		const labelItems: CompletionItem[] = Object.keys(defines).map(macroName => {
-			const value = defines[macroName];
+		const labelItems: CompletionItem[] = Object.keys(labels).map(labelName => {
 			return {
-				label: macroName,
-				kind: CompletionItemKind.Constant, 
-				detail: `Macro: ${value}`,         
-				documentation: `Defined as: ${value}`
+				label: labelName,
+				kind: CompletionItemKind.Value, 
+				detail: "",         
+				documentation: ""
 			};
 		});
 
 		// build
 		return [
 			...macroItems,
-			...staticCompletionItems
+			...staticCompletionItems,
+			...labelItems
 		];
 	}
 );
@@ -176,7 +172,7 @@ connection.onDidChangeConfiguration(change => {
 
 
 // word
-const WORD_REGEX = /[a-zA-Z0-9_]+/g;
+const WORD_REGEX = /[%a-zA-Z0-9_.]+/g;
 
 // Get Cursol Position
 function getWordRangeAtPosition(document: TextDocument, position: { line: number, character: number }): { word: string, start: number, end: number } | null {
@@ -250,10 +246,12 @@ connection.onHover((params: TextDocumentPositionParams): Hover | null => {
 
   // get macro
   const data = syntaxCacher.get(document.uri);
+  const labels = data.labels;
   const defines = data.macros;
 
-  // check define
+  
   if (defines.hasOwnProperty(word)) {
+		// define
 		const macroValue = defines[word];
 		const content: MarkupContent = {
 			kind: MarkupKind.Markdown,
@@ -267,10 +265,79 @@ connection.onHover((params: TextDocumentPositionParams): Hover | null => {
 		return {
 			contents: content
 		};
+  }else if(labels.hasOwnProperty(word)){
+		// label
+		const content: MarkupContent = {
+			kind: MarkupKind.Markdown,
+			value: [
+			`## ${word}`,
+			`---`
+			].join('\n')
+		};
+
+		return {
+			contents: content
+		};
+	}else if (REGISTERS.hasOwnProperty(word)) {
+		// register
+		const content: MarkupContent = {
+			kind: MarkupKind.Markdown,
+			value: [
+				`**Register** \`${word}\``,
+				'---',
+				REGISTERS[word] || ''
+			].join('\n')
+		};
+		return { contents: content };
+  }else if (OPCODES.hasOwnProperty(word)) {
+		//opecode
+		const content: MarkupContent = {
+			kind: MarkupKind.Markdown,
+			value: [
+				`**Opecode** \`${word}\``,
+				'---',
+				OPCODES[word] || ''
+			].join('\n')
+		};
+		return { contents: content };
   }
 
   return null;
 });
+
+//difinition
+connection.onDefinition((params: DefinitionParams): Location | null => {
+	const document = documents.get(params.textDocument.uri);
+	if (!document) return null;
+
+	const wordResult = getWordRangeAtPosition(document, params.position);
+	if (!wordResult) return null;
+	const word = wordResult.word;
+
+	const data = syntaxCacher.get(document.uri);
+
+	// find difinition
+	if (data.macros.hasOwnProperty(word)) {
+		const def = data.macros[word];
+		return Location.create(def.location.uri, {
+			start: { line: def.location.line, character: 0 },
+			end: { line: def.location.line, character: 100 }
+		});
+	}
+
+	// find difinition
+	if (data.labels.hasOwnProperty(word)) {
+		const loc = data.labels[word];
+		return Location.create(loc.uri, {
+			start: { line: loc.line, character: 0 },
+			end: { line: loc.line, character: 100 }
+		});
+	}
+
+	return null;
+});
+
+
 
 // Senmatuc tokens
 connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
@@ -286,13 +353,16 @@ connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
 	
 	// get cache
 	const data = syntaxCacher.get(document.uri);
+	const labels = data.labels;
 	const defines = data.macros;
+	const labeledNames = Object.keys(labels);
 	const definedMacroNames = Object.keys(defines);
 
 	// check word
-	const allWordsRegex = /[a-zA-Z_][a-zA-Z0-9_]*/g;
+	const allWordsRegex = /[a-zA-Z0-9_.]+/g;
 	let match: RegExpExecArray | null;
 	let line = 0;
+	
 
 	while ((match = allWordsRegex.exec(text)) !== null) {
 		// find token
@@ -308,7 +378,7 @@ connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
 		}
 
 		// push
-		if (definedMacroNames.includes(word) && !word.startsWith("#")) {
+		if (definedMacroNames.includes(word)) {
 			builder.push(
 				range.start.line, 
 				range.start.character, 
@@ -316,10 +386,22 @@ connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
 				tokenTypes.indexOf('macro'), 
 				0 
 			);
-		}
-		//interface
-	}
+		}else if(labeledNames.includes(word)){
+			let length = word.length
+			let nextIndex = match.index+length
+			if(nextIndex < text.length && text[nextIndex] === ':')
+				length += 1
 
+			builder.push(
+				range.start.line, 
+				range.start.character, 
+				length, 
+				tokenTypes.indexOf('variable'), 
+				0 
+			);
+		}
+	}
+	
 	//build
 	return builder.build();
 });

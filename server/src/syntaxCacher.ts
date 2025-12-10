@@ -3,10 +3,25 @@ import * as path from 'path';
 import { emitWarning } from 'process';
 import { URI } from 'vscode-uri';
 
+
+
+
+// Symbol location
+export interface SymbolLocation {
+	uri: string;
+	line: number;
+}
+
+// macro value & symbol location
+export interface MacroDefinition {
+	value: string;
+	location: SymbolLocation;
+}
+
 // Symbol table
 export interface symbolTable {
-  macros: { [key: string]: string },
-	labels: string[]
+	macros: { [key: string]: MacroDefinition };
+	labels: { [key: string]: SymbolLocation };
 }
 
 // Cache entry
@@ -44,15 +59,15 @@ export class SyntaxCacher {
 	public update(uri: string, text: string) {
 		const table: symbolTable = {
 			macros: {},
-			labels: []
+			labels: {}
 		};
 		const dependences: string[] = [];
 
 		//parse Label
-		table.labels = parseLabel(text)
+		table.labels = parseLabel(text,uri)
 
 		//parse Macro
-		table.macros = parseMacroDefinitions(text)
+		table.macros = parseMacroDefinitions(text,uri)
 
 		// check include
 		const files = parseIncludeFilenames(text)
@@ -87,7 +102,7 @@ export class SyntaxCacher {
 
 	//get
 	public get(uri: string, visited = new Set<string>()): symbolTable {
-		if (visited.has(uri)) return { macros: {} ,labels: []};
+		if (visited.has(uri)) return { macros: {} ,labels: {}};
 		visited.add(uri);
 
 		let entry = this.cache.get(uri);
@@ -106,7 +121,7 @@ export class SyntaxCacher {
 			}
 		}
 
-		if (!entry) return { macros: {} ,labels: []};
+		if (!entry) return { macros: {} ,labels: {}};
 
 		//marge data
 		let mergedData: symbolTable = {
@@ -125,9 +140,14 @@ export class SyntaxCacher {
 	}
 }
 
+//get line num
+function getLineNumber(text: string, index: number): number {
+	return text.substring(0, index).split(/\r\n|\r|\n/).length - 1;
+}
+
 // parse Macros
-function parseMacroDefinitions(text: string): { [key: string]: string } {
-    const defines: { [key: string]: string } = {};
+function parseMacroDefinitions(text: string,uri: string): { [key: string]: MacroDefinition } {
+    const defines: { [key: string]: MacroDefinition } = {};
     const defineRegex = /^\s*#\s*define\s+([a-zA-Z_]\w*)(?:\s+(.*?))?$/gm;
     let match: RegExpExecArray | null;
 
@@ -141,7 +161,13 @@ function parseMacroDefinitions(text: string): { [key: string]: string } {
         const blockCommentIdx = value.indexOf('/*');
         if (blockCommentIdx !== -1) value = value.substring(0, blockCommentIdx);
 
-        defines[name] = value.trim();
+        defines[name] = {
+					value: value.trim(),
+					location: {
+						uri: uri,
+						line: getLineNumber(text,match.index)
+					}
+				}
     }
     return defines;
 }
@@ -160,20 +186,33 @@ function parseIncludeFilenames(text: string): string[] {
 }
 
 //parse label
-function parseLabel(text: string): string[] {
-	const labels: string[] = [];
+function parseLabel(text: string,uri :string): { [key: string]: SymbolLocation } {
+	const labels: { [key: string]: SymbolLocation } = {};
 
 	const externLabelRegex = /^\s*(?:\.extern\s+([a-zA-Z_][a-zA-Z0-9_.]*))/gm;
 	const labelRegex = /^\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*:/gm;
+	const sectionRegex = /^\s*\.section\s+([a-zA-Z0-9_.]+)/gm;
 
 	let match: RegExpExecArray | null;
 
+	// lambda add label 
+	const addLabel = (name: string, index: number) => {
+		labels[name] = {
+			uri: uri,
+			line: getLineNumber(text, index)
+		};
+	};
+
 	while ((match = externLabelRegex.exec(text)) !== null) {
-		labels.push(match[1]);
+		addLabel(match[1], match.index);
 	}
 
 	while ((match = labelRegex.exec(text)) !== null) {
-		labels.push(match[1]);
+		addLabel(match[1], match.index);
+	}
+
+	while ((match = sectionRegex.exec(text)) !== null) {
+		addLabel(match[1], match.index);
 	}
 
 	return labels

@@ -4,15 +4,18 @@
 	"description": "GNU Assembler x86/x86_64 language support",
 	"version": "0.1.2",
 	"license": "MIT",
-	"publisher": "basdp",
+	"publisher": "user-0021",
 	"repository": {
 		"url": "https://github.com/user-0021/my-vscode-language-gas-x86#.git"
 	},
 	"engines": {
-		"vscode": "^1.0.0"
+		"vscode": "^1.106.1"
 	},
 	"categories": [
 		"Programming Languages"
+	],
+	"activationEvents": [
+		"onLanguage:gas-x86"
 	],
 	"main": "./client/out/extension.js",
 	"contributes": {
