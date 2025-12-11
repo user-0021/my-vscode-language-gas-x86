@@ -3,36 +3,70 @@ import { CompletionItem, CompletionItemKind } from 'vscode-languageserver/node';
 //item
 type ItemType = Record<string,string>;
 
+const seq = (prefix: string, start: number, end: number, desc: string, suffix: string = "") => 
+    Object.fromEntries(Array.from({ length: end - start + 1 }, (_, i) => [`${prefix}${start + i}${suffix}`, desc]));
+
 // 生のデータリスト（メンテナンスしやすいように文字列のまま定義）
 export const REGISTERS: ItemType = {
-	// 64-bit Ragisters
-	'%rax': 'Accumulator Register (64-bit). Used for arithmetic and return values.',
-	'%rbx': 'Base Register (64-bit). General purpose, often used as a base pointer.',
-	'%rcx': 'Counter Register (64-bit). Used for loops and string operations.',
-	'%rdx': 'Data Register (64-bit). Used for I/O and arithmetic.',
-	'%rsi': 'Source Index (64-bit). Used for string operations (source).',
-	'%rdi': 'Destination Index (64-bit). Used for string operations (destination) and 1st argument.',
-	'%rsp': 'Stack Pointer (64-bit). Points to the top of the stack.',
-	'%rbp': 'Base Pointer (64-bit). Points to the base of the stack frame.',
-	'%r8':  'General Purpose Register (64-bit).',
-	'%r9':  'General Purpose Register (64-bit).',
-	'%r10': 'General Purpose Register (64-bit).',
-	'%r11': 'General Purpose Register (64-bit).',
-	'%r12': 'General Purpose Register (64-bit).',
-	'%r13': 'General Purpose Register (64-bit).',
-	'%r14': 'General Purpose Register (64-bit).',
-	'%r15': 'General Purpose Register (64-bit).',
+	// 64-bit General Ragisters
+	'%rax':  'Accumulator Register (64-bit). Used for arithmetic and return values.',
+	'%rbx':  'Base Register (64-bit). General purpose, often used as a base pointer.',
+	'%rcx':  'Counter Register (64-bit). Used for loops and string operations.',
+	'%rdx':  'Data Register (64-bit). Used for I/O and arithmetic.',
+	'%rsi':  'Source Index (64-bit). Used for string operations (source).',
+	'%rdi':  'Destination Index (64-bit). Used for string operations (destination) and 1st argument.',
+	'%rsp':  'Stack Pointer (64-bit). Points to the top of the stack.',
+	'%rbp':  'Base Pointer (64-bit). Points to the base of the stack frame.',
+	...seq('%r',8,15,'General Purpose Register (64-bit).'),
 
-	// 32-bit Ragisters
-	'%eax': 'Accumulator Register (32-bit lower half of %rax).',
-	'%ebx': 'Base Register (32-bit lower half of %rbx).',
-	'%ecx': 'Counter Register (32-bit lower half of %rcx).',
-	'%edx': 'Data Register (32-bit lower half of %rdx).',
-	'%esi': 'Source Index (32-bit).',
-	'%edi': 'Destination Index (32-bit).',
-	'%esp': 'Stack Pointer (32-bit).',
-	'%ebp': 'Base Pointer (32-bit).',
-	
+	// 32-bit General Ragisters
+	'%eax':  'Accumulator Register (32-bit lower half of %rax).',
+	'%ebx':  'Base Register (32-bit lower half of %rbx).',
+	'%ecx':  'Counter Register (32-bit lower half of %rcx).',
+	'%edx':  'Data Register (32-bit lower half of %rdx).',
+	'%esi':  'Source Index (32-bit).',
+	'%edi':  'Destination Index (32-bit).',
+	'%esp':  'Stack Pointer (32-bit).',
+	'%ebp':  'Base Pointer (32-bit).',
+	...seq('%r',8,15,'General Purpose Register (32-bit).','d'),
+
+	// 16-bit General Ragisters
+	'%ax':   'Accumulator Register (16-bit lower half of %eax).',
+	'%bx':   'Base Register (16-bit lower half of %ebx).',
+	'%cx':   'Counter Register (16-bit lower half of %ecx).',
+	'%dx':   'Data Register (16-bit lower half of %edx).',
+	'%si':   'Source Index (16-bit).',
+	'%di':   'Destination Index (16-bit).',
+	'%sp':   'Stack Pointer (16-bit).',
+	'%bp':   'Base Pointer (16-bit).',
+	...seq('%r',8,15,'General Purpose Register (16-bit).','w'),
+
+	// 8-bit General Ragisters
+	'%al':   'Accumulator Register (8-bit lower half of %ax).',
+	'%ah':   'Accumulator Register (8-bit higher half of %ax).',
+	'%bh':   'Base Register (8-bit higher half of %bx).',
+	'%bl':   'Base Register (8-bit lower half of %bx).',
+	'%ch':   'Counter Register (8-bit higher half of %cx).',
+	'%cl':   'Counter Register (8-bit lower half of %cx).',
+	'%dh':   'Data Register (8-bit higher half of %dx).',
+	'%dl':   'Data Register (8-bit lower half of %dx).',
+	'%sil':  'Source Index (8-bit).',
+	'%dil':  'Destination Index (8-bit).',
+	'%spl':  'Stack Pointer (8-bit).',
+	'%bpl':  'Base Pointer (8-bit).',
+	...seq('%r',8,15,'General Purpose Register (8-bit).','b'),
+
+	// Vector Registers
+	...seq('%mm',0,7,'Multi Media EXtensions.'),
+	...seq('%xmm',0,15,'Streaming SIMD Extensions.'),
+	...seq('%ymm',0,31,'Advanced Vector Extensions.'),
+	...seq('%zmm',0,31,'Advanced Vector Extensions 512.'),
+
+	// program Registers
+	'%rip':  'Instruction Pointer (64-bit)',
+	'%eip':  'Instruction Pointer (32-bit)',
+	'%ip' :  'Instruction Pointer (16-bit)',
+
 	// Segment Registers
 	'%cs': 'Code Segment.',
 	'%ds': 'Data Segment.',
@@ -44,70 +78,182 @@ export const REGISTERS: ItemType = {
 	// Control Registers
 	'%cr0': 'Control Register 0. Controls operating mode and states.',
 	'%cr2': 'Control Register 2. Page Fault Linear Address.',
-	'%cr3': 'Control Register 3. Page Directory Base Address.',
-	'%cr4': 'Control Register 4. Architectural extensions.'
+	'%cr3': 'Control Register 3. PML4 Address.',
+	'%cr4': 'Control Register 4. Architectural extensions.',
+	'%cr8': 'Control Register 4. Architectural extensions.'
 };
 
 export const OPCODES: ItemType = {
-	//move
-	'mov':     'Move data from source to destination.',
-	'movl':    'Move data (32-bit long).',
-	'movq':    'Move data (64-bit quad word).',
-	'movb':    'Move data (8-bit byte).',
-	'movw':    'Move data (16-bit word).',
-	
-	//push
-	'push':    'Push source operand onto the stack.',
-	'pushl':   'Push 32-bit value onto the stack.',
-	'pushq':   'Push 64-bit value onto the stack.',
-	
-	//pop
-	'pop':     'Pop top of stack into destination operand.',
-	'popl':    'Pop 32-bit value from stack.',
-	'popq':    'Pop 64-bit value from stack.',
 	
 	//ret/call
-	'ret':     'Return from procedure.',
-	'call':    'Call procedure.',
-	
-	//math
-	'add':     'Add source to destination.',
-	'sub':     'Subtract source from destination.',
-	'imul':    'Signed multiply.',
-	'idiv':    'Signed divide.',
-	
-	//logic
-	'and':     'Logical AND.',
-	'or':      'Logical OR.',
-	'xor':     'Logical Exclusive OR.',
-	'not':     'One\'s complement negation.',
-	'neg':     'Two\'s complement negation.',
-	
+	'ret':      'Return from procedure.',
+	'call':     'Call procedure.',
+
 	//inc/dec
-	'inc':     'Increment operand by 1.',
-	'dec':     'Decrement operand by 1.',
+	'inc':      'Increment operand by 1.',
+	'dec':      'Decrement operand by 1.',
 	
+	//general register math
+	'add':      'Add source to destination.',
+	'adc':      'Add with carry bit.',
+	'adcx':     'Unsigned integer add with carry flag.',
+	'adox':     'Unsigned integer add with overflow flag.',
+	'sub':      'Subtract source from destination.',
+	'imul':     'Signed multiply.',
+	'idiv':     'Signed divide.',
+
+	//general register logic
+	'and':      'Logical AND.',
+	'andn':     'Logical NAND.',
+	'or':       'Logical OR.',
+	'xor':      'Logical Exclusive OR.',
+	'not':      'One\'s complement negation.',
+	'neg':      'Two\'s complement negation.',
+  'bextr':    'Bit field extract.',
+  'blsi':     'Extract lowest set isolated bit.',
+  'blsmsk':   'Get mask up to lowest set bit.',
+  'blsr':     'Reset lowest set bit.',
+	'bsf':      'Bit scan forward.',
+  'bsr':      'Bit scan reverse.',
+  'bt':       'Bit test.',
+  'btc':      'Bit test and complement.',
+  'btr':      'Bit test and reset.',
+  'bts':      'Bit test and set.',
+  'bzhi':     'Zero high bits starting with specified bit position.',
+
+	// general register control
+  'bswap':    'Byte swap.',
+  'cbw':        'Convert byte to word / convert word to doubleword / convert doubleword to quadword.',
+  'cdq':        'Convert word to doubleword / convert doubleword to quadword.',
+  'cdqe':       'Convert byte to word / convert word to doubleword / convert doubleword to quadword.',
+	
+	//packed data math
+	'addpd':    'Add packed double precision floating-point values.',
+	'addps':    'Add packed single precision floating-point values.',
+	'addsd':    'Add scalar double precision floating-point values.',
+	'addss':    'Add scalar single precision floating-point values.',
+	'addsubpd': 'add/sub packed double precision floating-point.',
+	'addsubps': 'add/sub packed single precision floating-point.',
+
+	//packed register logic
+	'andpd':    'Bitwise logical AND of packed double-precision floating-point values.',
+  'andps':    'Bitwise logical AND of packed single-precision floating-point values.',
+  'andnpd':   'Bitwise logical AND NOT of packed double-precision floating-point values.',
+  'andnps':   'Bitwise logical AND NOT of packed single-precision floating-point values.',
+
+	//blend 
+	'blendpd':  'Blend packed double precision floating-point values.',
+	'blendps':  'Blend packed single precision floating-point values.',
+	'blendvpd': 'Variable blend packed double precision floating-point values.',
+	'blendvps': 'Variable blend packed single precision floating-point values.',
+
+	// AES
+	'aesdec':          'Perform one round of an AES decryption flow.',
+	'aesdec128kl':     'Perform ten rounds of AES decryption flow with Key Locker using 128-bit key.',
+	'aesdec256kl':     'Perform 14 rounds of AES decryption flow with Key Locker using 256-bit key.',
+	'aesdeclast':      'Perform last round of an AES decryption flow.',
+	'aesdecwide128kl': 'Perform ten rounds of AES decryption flow with Key Locker on 8 blocks using 128-bit key.',
+	'aesdecwide256kl': 'Perform 14 rounds of AES decryption flow with Key Locker on 8 blocks using 256-bit key.',
+	'aesenc':          'Perform one round of an AES encryption flow.',
+	'aesenc128kl':     'Perform ten rounds of AES encryption flow with Key Locker using 128-bit key.',
+	'aesenc256kl':     'Perform 14 rounds of AES encryption flow with Key Locker using 256-bit key.',
+	'aesenclast':      'Perform last round of an AES encryption flow.',
+	'aesencwide128kl': 'Perform ten rounds of AES encryption flow with Key Locker on 8 blocks using 128-bit key.',
+	'aesencwide256kl': 'Perform 14 rounds of AES encryption flow with Key Locker on 8 blocks using 256-bit key.',
+	'aesimc':          'Perform the AES InvMixColumn transformation.',
+	'aeskeygenassist': 'AES round key generation assist.',
+
+	//ABC
+	'aaa':      'ASCII Adjust After Addition (Can\' use in 64-bit).',
+	'aas':      'ASCII Adjust After Subtraction (Can\' use in 64-bit).',
+	'aam':      'ASCII Adjust After Multiplication (Can\' use in 64-bit).',
+	'aad':      'ASCII Adjust Befor Devision (Can\' use in 64-bit).',
+
+	//move
+	'mov':      'Move data from source to destination.',
+	'movl':     'Move data (32-bit long).',
+	'movq':     'Move data (64-bit quad word).',
+	'movb':     'Move data (8-bit byte).',
+	'movw':     'Move data (16-bit word).',
+	'cmov':     'Conditional move.',
+	
+	//push
+	'push':     'Push source operand onto the stack.',
+	'pushl':    'Push 32-bit value onto the stack.',
+	'pushq':    'Push 64-bit value onto the stack.',
+	
+	//pop
+	'pop':      'Pop top of stack into destination operand.',
+	'popl':     'Pop 32-bit value from stack.',
+	'popq':     'Pop 64-bit value from stack.',
+
 	//jmp
-	'jmp':     'Jump unconditionally.',
-	'je':      'Jump if Equal (ZF=1).',
-	'jne':     'Jump if Not Equal (ZF=0).',
-	'jg':      'Jump if Greater (signed).',
-	'jge':     'Jump if Greater or Equal (signed).',
-	'jl':      'Jump if Less (signed).',
-	'jle':     'Jump if Less or Equal (signed).',
-	'jz':      'Jump if Zero.',
-	'jnz':     'Jump if Not Zero.',
+	'jmp':      'Jump unconditionally.',
+	'je':       'Jump if Equal (ZF=1).',
+	'jne':      'Jump if Not Equal (ZF=0).',
+	'jg':       'Jump if Greater (signed).',
+	'jge':      'Jump if Greater or Equal (signed).',
+	'jl':       'Jump if Less (signed).',
+	'jle':      'Jump if Less or Equal (signed).',
+	'jz':       'Jump if Zero.',
+	'jnz':      'Jump if Not Zero.',
 	
 	//flag
-	'cmp':     'Compare two operands (updates flags).',
-	'test':    'Logical Compare (AND) (updates flags).',
+	'test':       'Logical Compare (AND) (updates flags).',
+	'cmp':        'Compare two operands.',
+	'cmppd':      'Compare packed double precision floating-point values.',
+	'cmpps':      'Compare packed single precision floating-point values.',
+	'cmps':       'Compare string operands.',
+	'cmpsb':      'Compare string operands (byte).',
+	'cmpsd':      'Compare scalar double precision floating-point value.', 
+	'cmpsl':      'Compare string operands (doubleword).',
+	'cmpsq':      'Compare string operands (quadword).',
+	'cmpss':      'Compare scalar single precision floating-point value.',
+	'cmpsw':      'Compare string operands (word).',
+	'cmpxchg':    'Compare and exchange.',
+	'cmpxchg16b': 'Compare and exchange 16 bytes.',
+	'cmpxchg8b':  'Compare and exchange 8 bytes.',
+	'comisd':     'Compare scalar ordered double precision floating-point values and set EFLAGS.',
+	'comiss':     'Compare scalar ordered single precision floating-point values and set EFLAGS.',
+
+	//state bit
+  'clac':       'Clear AC flag in EFLAGS register.',
+  'clc':        'Clear carry flag.',
+  'cld':        'Clear direction flag.',
+  'cldemote':   'Cache line demote.',
+  'clflush':    'Flush cache line.',
+  'clflushopt': 'Flush cache line optimized.',
+  'cli':        'Clear interrupt flag.',
+  'clrssbsy':   'Clear busy flag in a supervisor shadow stack token.',
+  'clts':       'Clear task-switched flag in CR0.',
+  'clui':       'Clear user interrupt flag.',
+	'clwb':       'Cache line write back.',
+  'cmc':        'Complement carry flag.',
 	
 	//other
-	'lea':     'Load Effective Address.',
-	'nop':     'No Operation.',
-	'int':     'Software Interrupt.',
-	'hlt':     'stop cpu until a interrupt occurs.',
-	'syscall': 'Fast system call.'
+	'arpl':     'Adjust RPL field of segment selector.',
+	'lea':      'Load Effective Address.',
+	'nop':      'No Operation.',
+	'int':      'Software Interrupt.',
+	'hlt':      'stop cpu until a interrupt occurs.',
+	'syscall':  'Fast system call.',
+
+
+
+
+
+
+
+
+	//bound
+  'bndcl':  'Check lower bound.',
+  'bndcn':  'Check upper bound.',
+  'bndcu':  'Check upper bound.',
+  'bndldx': 'Load extended bounds using address translation.',
+  'bndmk':  'Make bounds.',
+  'bndmov': 'Move bounds.',
+  'bndstx': 'Store extended bounds using address translation.',
+  'bound':  'Check array index against bounds.',
 };
 
 //create Completion
