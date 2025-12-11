@@ -1,92 +1,110 @@
 import { CompletionItem, CompletionItemKind } from 'vscode-languageserver/node';
 
-//item
-type ItemType = Record<string,string>;
+//value type
+enum ParamType {
+	GENERAL_8BIT,
+	GENERAL_16BIT,
+	GENERAL_32BIT,
+	GENERAL_64BIT,
+	CONTROL,
+	MMX,
+	XMM,
+	YMM,
+	ZMM
+}
 
-const seq = (prefix: string, start: number, end: number, desc: string, suffix: string = "") => 
-    Object.fromEntries(Array.from({ length: end - start + 1 }, (_, i) => [`${prefix}${start + i}${suffix}`, desc]));
+
+
+//types
+type OperandType = Record<string,[ParamType[][],string]>;
+type RegisterType = Record<string,[ParamType,string]>;
+
+const seq = (prefix: string, start: number, end: number,type:ParamType, desc: string, suffix: string = "") => 
+	Object.fromEntries(Array.from({ length: end - start + 1 }, (_, i) => [`${prefix}${start + i}${suffix}`, [type,desc]]));
+const suf = (prefix: string, desc: string) => 
+	Object.fromEntries([['',''],['b','(8-bit).'],['w','(16-bit).'],['l','(32-bit).'],['q','(64-bit).']].map(([s, d]) => [`${prefix}${s}`,`${desc}${d}`]));
 
 // 生のデータリスト（メンテナンスしやすいように文字列のまま定義）
-export const REGISTERS: ItemType = {
+export const REGISTERS: RegisterType = {
 	// 64-bit General Ragisters
-	'%rax':  'Accumulator Register (64-bit). Used for arithmetic and return values.',
-	'%rbx':  'Base Register (64-bit). General purpose, often used as a base pointer.',
-	'%rcx':  'Counter Register (64-bit). Used for loops and string operations.',
-	'%rdx':  'Data Register (64-bit). Used for I/O and arithmetic.',
-	'%rsi':  'Source Index (64-bit). Used for string operations (source).',
-	'%rdi':  'Destination Index (64-bit). Used for string operations (destination) and 1st argument.',
-	'%rsp':  'Stack Pointer (64-bit). Points to the top of the stack.',
-	'%rbp':  'Base Pointer (64-bit). Points to the base of the stack frame.',
-	...seq('%r',8,15,'General Purpose Register (64-bit).'),
+	'%rax':  [ParamType.GENERAL_64BIT,'Accumulator Register (64-bit). Used for arithmetic and return values.'],
+	'%rbx':  [ParamType.GENERAL_64BIT,'Base Register (64-bit). General purpose, often used as a base pointer.'],
+	'%rcx':  [ParamType.GENERAL_64BIT,'Counter Register (64-bit). Used for loops and string operations.'],
+	'%rdx':  [ParamType.GENERAL_64BIT,'Data Register (64-bit). Used for I/O and arithmetic.'],
+	'%rsi':  [ParamType.GENERAL_64BIT,'Source Index (64-bit). Used for string operations (source).'],
+	'%rdi':  [ParamType.GENERAL_64BIT,'Destination Index (64-bit). Used for string operations (destination) and 1st argument.'],
+	'%rsp':  [ParamType.GENERAL_64BIT,'Stack Pointer (64-bit). Points to the top of the stack.'],
+	'%rbp':  [ParamType.GENERAL_64BIT,'Base Pointer (64-bit). Points to the base of the stack frame.'],
+	...seq('%r',8,15,ParamType.GENERAL_64BIT,'General Purpose Register (64-bit).'),
 
 	// 32-bit General Ragisters
-	'%eax':  'Accumulator Register (32-bit lower half of %rax).',
-	'%ebx':  'Base Register (32-bit lower half of %rbx).',
-	'%ecx':  'Counter Register (32-bit lower half of %rcx).',
-	'%edx':  'Data Register (32-bit lower half of %rdx).',
-	'%esi':  'Source Index (32-bit).',
-	'%edi':  'Destination Index (32-bit).',
-	'%esp':  'Stack Pointer (32-bit).',
-	'%ebp':  'Base Pointer (32-bit).',
-	...seq('%r',8,15,'General Purpose Register (32-bit).','d'),
+	'%eax':  [ParamType.GENERAL_32BIT,'Accumulator Register (32-bit lower half of %rax).'],
+	'%ebx':  [ParamType.GENERAL_32BIT,'Base Register (32-bit lower half of %rbx).'],
+	'%ecx':  [ParamType.GENERAL_32BIT,'Counter Register (32-bit lower half of %rcx).'],
+	'%edx':  [ParamType.GENERAL_32BIT,'Data Register (32-bit lower half of %rdx).'],
+	'%esi':  [ParamType.GENERAL_32BIT,'Source Index (32-bit).'],
+	'%edi':  [ParamType.GENERAL_32BIT,'Destination Index (32-bit).'],
+	'%esp':  [ParamType.GENERAL_32BIT,'Stack Pointer (32-bit).'],
+	'%ebp':  [ParamType.GENERAL_32BIT,'Base Pointer (32-bit).'],
+	...seq('%r',8,15,ParamType.GENERAL_32BIT,'General Purpose Register (32-bit).','d'),
 
 	// 16-bit General Ragisters
-	'%ax':   'Accumulator Register (16-bit lower half of %eax).',
-	'%bx':   'Base Register (16-bit lower half of %ebx).',
-	'%cx':   'Counter Register (16-bit lower half of %ecx).',
-	'%dx':   'Data Register (16-bit lower half of %edx).',
-	'%si':   'Source Index (16-bit).',
-	'%di':   'Destination Index (16-bit).',
-	'%sp':   'Stack Pointer (16-bit).',
-	'%bp':   'Base Pointer (16-bit).',
-	...seq('%r',8,15,'General Purpose Register (16-bit).','w'),
+	'%ax':   [ParamType.GENERAL_16BIT,'Accumulator Register (16-bit lower half of %eax).'],
+	'%bx':   [ParamType.GENERAL_16BIT,'Base Register (16-bit lower half of %ebx).'],
+	'%cx':   [ParamType.GENERAL_16BIT,'Counter Register (16-bit lower half of %ecx).'],
+	'%dx':   [ParamType.GENERAL_16BIT,'Data Register (16-bit lower half of %edx).'],
+	'%si':   [ParamType.GENERAL_16BIT,'Source Index (16-bit).'],
+	'%di':   [ParamType.GENERAL_16BIT,'Destination Index (16-bit).'],
+	'%sp':   [ParamType.GENERAL_16BIT,'Stack Pointer (16-bit).'],
+	'%bp':   [ParamType.GENERAL_16BIT,'Base Pointer (16-bit).'],
+	...seq('%r',8,15,ParamType.GENERAL_16BIT,'General Purpose Register (16-bit).','w'),
 
 	// 8-bit General Ragisters
-	'%al':   'Accumulator Register (8-bit lower half of %ax).',
-	'%ah':   'Accumulator Register (8-bit higher half of %ax).',
-	'%bh':   'Base Register (8-bit higher half of %bx).',
-	'%bl':   'Base Register (8-bit lower half of %bx).',
-	'%ch':   'Counter Register (8-bit higher half of %cx).',
-	'%cl':   'Counter Register (8-bit lower half of %cx).',
-	'%dh':   'Data Register (8-bit higher half of %dx).',
-	'%dl':   'Data Register (8-bit lower half of %dx).',
-	'%sil':  'Source Index (8-bit).',
-	'%dil':  'Destination Index (8-bit).',
-	'%spl':  'Stack Pointer (8-bit).',
-	'%bpl':  'Base Pointer (8-bit).',
-	...seq('%r',8,15,'General Purpose Register (8-bit).','b'),
+	'%al':   [ParamType.GENERAL_8BIT,'Accumulator Register (8-bit lower half of %ax).'],
+	'%ah':   [ParamType.GENERAL_8BIT,'Accumulator Register (8-bit higher half of %ax).'],
+	'%bh':   [ParamType.GENERAL_8BIT,'Base Register (8-bit higher half of %bx).'],
+	'%bl':   [ParamType.GENERAL_8BIT,'Base Register (8-bit lower half of %bx).'],
+	'%ch':   [ParamType.GENERAL_8BIT,'Counter Register (8-bit higher half of %cx).'],
+	'%cl':   [ParamType.GENERAL_8BIT,'Counter Register (8-bit lower half of %cx).'],
+	'%dh':   [ParamType.GENERAL_8BIT,'Data Register (8-bit higher half of %dx).'],
+	'%dl':   [ParamType.GENERAL_8BIT,'Data Register (8-bit lower half of %dx).'],
+	'%sil':  [ParamType.GENERAL_8BIT,'Source Index (8-bit).'],
+	'%dil':  [ParamType.GENERAL_8BIT,'Destination Index (8-bit).'],
+	'%spl':  [ParamType.GENERAL_8BIT,'Stack Pointer (8-bit).'],
+	'%bpl':  [ParamType.GENERAL_8BIT,'Base Pointer (8-bit).'],
+	...seq('%r',8,15,ParamType.GENERAL_8BIT,'General Purpose Register (8-bit).','b'),
 
 	// Vector Registers
-	...seq('%mm',0,7,'Multi Media EXtensions.'),
-	...seq('%xmm',0,15,'Streaming SIMD Extensions.'),
-	...seq('%ymm',0,31,'Advanced Vector Extensions.'),
-	...seq('%zmm',0,31,'Advanced Vector Extensions 512.'),
+	...seq('%mm',0,7,ParamType.MMX,'Multi Media EXtensions.'),
+	...seq('%xmm',0,15,ParamType.XMM,'Streaming SIMD Extensions.'),
+	...seq('%ymm',0,31,ParamType.YMM,'Advanced Vector Extensions.'),
+	...seq('%zmm',0,31,ParamType.ZMM,'Advanced Vector Extensions 512.'),
 
 	// program Registers
-	'%rip':  'Instruction Pointer (64-bit)',
-	'%eip':  'Instruction Pointer (32-bit)',
-	'%ip' :  'Instruction Pointer (16-bit)',
+	'%rip':  [ParamType.GENERAL_64BIT,',Instruction Pointer (64-bit)'],
+	'%eip':  [ParamType.GENERAL_32BIT,',Instruction Pointer (32-bit)'],
+	'%ip' :  [ParamType.GENERAL_16BIT,',Instruction Pointer (16-bit)'],
 
 	// Segment Registers
-	'%cs': 'Code Segment.',
-	'%ds': 'Data Segment.',
-	'%es': 'Extra Segment.',
-	'%fs': 'F Segment (often used for thread-local storage).',
-	'%gs': 'G Segment.',
-	'%ss': 'Stack Segment.',
+	'%cs': [ParamType.GENERAL_16BIT,'Code Segment.'],
+	'%ds': [ParamType.GENERAL_16BIT,'Data Segment.'],
+	'%es': [ParamType.GENERAL_16BIT,'Extra Segment.'],
+	'%fs': [ParamType.GENERAL_16BIT,'F Segment.'],
+	'%gs': [ParamType.GENERAL_16BIT,'G Segment.'],
+	'%ss': [ParamType.GENERAL_16BIT,'Stack Segment.'],
 
 	// Control Registers
-	'%cr0': 'Control Register 0. Controls operating mode and states.',
-	'%cr2': 'Control Register 2. Page Fault Linear Address.',
-	'%cr3': 'Control Register 3. PML4 Address.',
-	'%cr4': 'Control Register 4. Architectural extensions.',
-	'%cr8': 'Control Register 4. Architectural extensions.'
+	'%cr0': [ParamType.CONTROL,'Control Register 0. Controls operating mode and states.'],
+	'%cr2': [ParamType.CONTROL,'Control Register 2. Page Fault Linear Address.'],
+	'%cr3': [ParamType.CONTROL,'Control Register 3. PML4 Address.'],
+	'%cr4': [ParamType.CONTROL,'Control Register 4. Architectural extensions.'],
+	'%cr8': [ParamType.CONTROL,'Control Register 4. Architectural extensions.']
 };
 
-export const OPCODES: ItemType = {
+export const OPCODES: OperandType = {
 	
 	//ret/call
-	'ret':      'Return from procedure.',
+	'ret':      [[],'Return from procedure.'],
 	'call':     'Call procedure.',
 
 	//inc/dec
@@ -94,13 +112,13 @@ export const OPCODES: ItemType = {
 	'dec':      'Decrement operand by 1.',
 	
 	//general register math
-	'add':      'Add source to destination.',
 	'adc':      'Add with carry bit.',
 	'adcx':     'Unsigned integer add with carry flag.',
 	'adox':     'Unsigned integer add with overflow flag.',
 	'sub':      'Subtract source from destination.',
 	'imul':     'Signed multiply.',
 	'idiv':     'Signed divide.',
+	...suf('add','Add source to destination'),
 
 	//general register logic
 	'and':      'Logical AND.',
@@ -257,6 +275,15 @@ export const OPCODES: ItemType = {
 };
 
 //create Completion
+function createCompletionItemsRegister(defs: RegisterType, kind: CompletionItemKind, typeName: string): CompletionItem[] {
+    return Object.entries(defs).map(([name, info]) => ({
+        label: name,
+        kind: kind,
+        detail: typeName,           
+        documentation: info[1]
+    }));
+}
+
 function createCompletionItems(defs: ItemType, kind: CompletionItemKind, typeName: string): CompletionItem[] {
     return Object.entries(defs).map(([name, description]) => ({
         label: name,
@@ -266,5 +293,5 @@ function createCompletionItems(defs: ItemType, kind: CompletionItemKind, typeNam
     }));
 }
 
-export const COMPLETION_ITEMS_REGISTER = createCompletionItems(REGISTERS, CompletionItemKind.Variable, 'Register');
+export const COMPLETION_ITEMS_REGISTER = createCompletionItemsRegister(REGISTERS, CompletionItemKind.Variable, 'Register');
 export const COMPLETION_ITEMS_OPCODE   = createCompletionItems(OPCODES  , CompletionItemKind.Keyword , 'Instruction');
