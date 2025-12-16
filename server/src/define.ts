@@ -16,6 +16,8 @@ enum ParamType {
 	MEMORY_64BIT,
 	MEMORY_128BIT,
 	MEMORY_256BIT,
+	MEMORY_384BIT,
+	MEMORY_512BIT,
 	MEMREG_8BIT,
 	MEMREG_16BIT,
 	MEMREG_32BIT,
@@ -34,7 +36,12 @@ enum FlagBit {
 	ZF,
 	AF,
 	CF,
-	PF
+	PF,
+	OE,
+	UE,
+	IE,
+	PE,
+	DE
 }
 
 interface OperandVariant {
@@ -143,7 +150,7 @@ export const OPCODES: OperandList = {
 	'aad':      {
 		args: [
 			{args:[],description:"十進数の除算のためにaxレジスタを調整します。"},
-			{args:[ParamType.IMMU_8BIT],description:"<第一引数>進数の除算のためにaxレジスタを調整します。"}
+			{args:[ParamType.IMMU_8BIT],description:"{0}で指定した基数について、\n除算のためにaxレジスタを調整します。"}
 		],
 		flags_affected: [FlagBit.SF,FlagBit.ZF,FlagBit.PF],
 		desc: '加算後のASCII調整'
@@ -151,7 +158,7 @@ export const OPCODES: OperandList = {
 	'aam':      {
 		args: [
 			{args:[],description:"十進数の乗算後axレジスタを調整します。"},
-			{args:[ParamType.IMMU_8BIT],description:"<第一引数>進数の乗算後axレジスタを調整します。"}
+			{args:[ParamType.IMMU_8BIT],description:"{0}で指定した基数について、\n乗算後axレジスタを調整します。"}
 		],
 		flags_affected: [FlagBit.SF,FlagBit.ZF,FlagBit.PF],
 		desc: '加算後のASCII調整'
@@ -165,166 +172,167 @@ export const OPCODES: OperandList = {
 	},
 	'adc': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"8bitの即値を8bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"16bitの即値を16bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"32bitの即値を32bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"64bitの即値を64bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"8bitの即値を8bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"16bitの即値を16bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"32bitの即値を32bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"64bitの即値を64bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"8bitの即値を符号拡張して16bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"8bitの即値を符号拡張して32bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"8bitの即値を符号拡張して64bitのメモリ/レジスタにキャリー付きで加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"32bitの即値を符号拡張して64bitのメモリ/レジスタにキャリー付きで加算します。"}
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"{0}を{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"{0}を符号拡張して{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"{0}を符号拡張して{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}にキャリー付きで加算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}にキャリー付きで加算します。"}
 		],
 		flags_affected: [FlagBit.OF,FlagBit.SF,FlagBit.ZF,FlagBit.AF,FlagBit.CF,FlagBit.PF],
 		desc: 'キャリー付き加算'
 	},
 	'adcx': {
 		args: [
-			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"32bitのメモリ/レジスタと32bitレジスタを符号なし加算し、キャリーフラグに書き込みます。"},
-			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"64bitのメモリ/レジスタと64bitレジスタを符号なし加算し、キャリーフラグに書き込みます。"}
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"{0}と{1}に符号なし加算し、キャリーフラグに書き込みます。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"{0}と{1}に符号なし加算し、キャリーフラグに書き込みます。"}
 		],
 		flags_affected: [FlagBit.CF],
 		desc: 'キャリーフラグ付きの2つのオペランドの符号なし整数加算'
 	},
 	'add': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"8bitの即値を8bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"16bitの即値を16bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"32bitの即値を32bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"64bitの即値を64bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"8bitの即値を8bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"16bitの即値を16bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"32bitの即値を32bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"64bitの即値を64bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"8bitの即値を符号拡張して16bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"8bitの即値を符号拡張して32bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"8bitの即値を符号拡張して64bitのメモリ/レジスタに加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"32bitの即値を符号拡張して64bitのメモリ/レジスタに加算します。"}
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"{0}を{1}に加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"{0}を符号拡張して{1}に加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"{0}を符号拡張して{1}に加算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}に加算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}に加算します。"}
 		],
 		flags_affected: [FlagBit.OF,FlagBit.SF,FlagBit.ZF,FlagBit.AF,FlagBit.CF,FlagBit.PF],
 		desc: '加算'
 	},
 	'addpd': {
 		args: [
-			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"1:xmmレジスタに2:xmm/128bitメモリを加算し1:xmmレジスタに格納します"},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"パックされたDouble値として{0}に{1}を加算し{1}に格納します"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'パックされた倍精度浮動小数点値の加算'
 	},
-	'': {
+	'addps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"パックされたfloat値として{0}に{1}を加算し{1}に格納します"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'パックされた単精度浮動小数点値の加算'
 	},
-	'': {
+	'addsd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"下位にセットされたdouble値として{0}に{1}を加算し{1}に格納します"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'スカラー倍精度浮動小数点値の加算'
 	},
-	'': {
+	'addss': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"下位にセットされたfloat値として{0}に{1}を加算し{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'スカラー単精度浮動小数点値の加算'
 	},
-	'': {
+	'addsubpd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"パックされたdouble値として{0}に{1}を加算/減算し{1}に格納します。\n{1}[127:64]={1}[127:64]+{0}[127:64]\n{1}[63:0]={1}[63:0]-{0}[63:0]"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'パックされた倍精度浮動小数点加算/減算'
 	},
-	'': {
+	'addsubps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM ],description:"パックされたfloat値として{0}に{1}を加算/減算し{1}に格納します。\n{1}[127:96]={1}[127:96]+{0}[127:96]\n{1}[95:64]={1}[95:64]-{0}[95:64]\n{1}[63:32]={1}[63:32]+{0}[63:32]\n{1}[31:0]={1}[31:0]-{0}[31:0]"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OE,FlagBit.UE,FlagBit.IE,FlagBit.PE,FlagBit.DE],
+		desc: 'パックされた単精度浮動小数点加算/減算'
 	},
-	'': {
+	'adox': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT ],description:"{0}を{1}に符号なし加算し、オーバーフローフラグに書き込みます。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT ],description:"{0}を{1}に符号なし加算し、オーバーフローフラグに書き込みます。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OF],
+		desc: 'オーバーフローフラグ付きの2つのオペランドの符号なし整数加算'
 	},
-	'': {
+	'aesdec': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}の1つの128bitAESキーと{1}の一つの128bitデータを使用し、\nAES復号フローの1ラウンドを実行します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'AES復号フローの1ラウンドの実行'
 	},
-	'': {
+	'aesdec128kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_256BIT,ParamType.XMM],description:"{0}の128bitAESキーで{1}のデータを復号し、{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.SF,FlagBit.AF,FlagBit.PF,FlagBit.CF],
+		desc: '128ビットキーを使用したキーロッカーによるAES復号フローの10ラウンドの実行'
 	},
-	'': {
+	'aesdec256kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_512BIT,ParamType.XMM],description:"{0}の256bitAESキーで{1}のデータを復号し、{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.SF,FlagBit.AF,FlagBit.PF,FlagBit.CF],
+		desc: '256ビットキーを使用したキーロッカーによるAES復号フローの14ラウンドの実行'
 	},
-	'': {
+	'aesdeclast': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{1}の128bitデータと{0}の128bitラウンドキーを使用して、\nAES復号フローの最終ラウンドを行います。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'AES復号フローの最終ラウンドの実行'
 	},
-	'': {
+	'aesdecwide128kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_384BIT],description:"{0}の128bitAESキーを使用しXMM0~7を復号します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.SF,FlagBit.AF,FlagBit.PF,FlagBit.CF],
+		desc: '128ビットキーを使用した8ブロックでのキーロッカーによるAES復号フローの10ラウンドの実行'
 	},
-	'': {
+	'aesdecwide256kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_512BIT],description:"{0}の256bitAESキーを使用しXMM0!7を復号します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.SF,FlagBit.AF,FlagBit.PF,FlagBit.CF],
+		desc: '256ビットキーを使用した8ブロックでのキーロッカーによるAES復号フローの14ラウンドの実行'
 	},
-	'': {
+	'aesenc': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}の128bitラウンドキーと{1}の128bitデータを使用して、\nAES暗号化フローの1ラウンドを実行します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'AES暗号化フローの1ラウンドの実行'
 	},
-	'': {
+	'aesenc128kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_384BIT,ParamType.XMM],description:"{0}の128bitAESキーで{1}を暗号化し、{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.SF,FlagBit.AF,FlagBit.PF,FlagBit.CF],
+		desc: '128ビットキーを使用したキーロッカーによるAES暗号化フローの10ラウンドの実行'
 	},
-	'': {
+	'aesenc256kl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_512BIT,ParamType.XMM],description:"{0}の256bitAESキーで{1}を暗号化し、{1}に格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '256ビットキーを使用したキーロッカーによるAES暗号化フローの14ラウンドの実行'
 	},
-	'': {
+	'aesenclast': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}の128ビットラウンドキーと{1}の128bitデータを使用して、\nAES暗号化フローの最終ラウンドを実行します"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'AES暗号化フローの最終ラウンドの実行'
 	},
 	'': {
 		args: [
