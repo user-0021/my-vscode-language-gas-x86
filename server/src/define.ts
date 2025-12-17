@@ -23,11 +23,15 @@ enum ParamType {
 	MEMREG_32BIT,
 	MEMREG_64BIT,
 	MEMXMM_128BIT,
+	MEMBND_64BIT,
+	MEMBND_128BIT,
 	CONTROL,
 	MMX,
 	XMM,
+	XMM0,
 	YMM,
-	ZMM
+	ZMM,
+	BND,
 }
 
 enum FlagBit {
@@ -364,175 +368,188 @@ export const OPCODES: OperandList = {
 	},
 	'and': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"{0}を{1}に加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"{0}を符号拡張して{1}に加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"{0}を符号拡張して{1}に加算します。"},
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}に加算します。"},
-			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"{0}を符号拡張して{1}に加算します。"}
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_16BIT  ,ParamType.MEMREG_16BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_32BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_64BIT  ,ParamType.MEMREG_64BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.MEMREG_8BIT ,ParamType.MEMREG_8BIT ],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.MEMREG_16BIT,ParamType.MEMREG_16BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.MEMREG_32BIT,ParamType.MEMREG_32BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.MEMREG_64BIT],description:"{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_16BIT],description:"符号拡張した{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_32BIT],description:"符号拡張した{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_64BIT],description:"符号拡張した{0}と{1}の論理積を計算します。"},
+			{args:[ParamType.IMMU_32BIT  ,ParamType.MEMREG_64BIT],description:"符号拡張した{0}と{1}の論理積を計算します。"}
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.OF,FlagBit.CF,FlagBit.SF,FlagBit.ZF,FlagBit.PF],
+		desc: '論理AND'
 	},
-	'': {
+	'andn': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT,ParamType.GENERAL_32BIT],description:"{2}に{0}とビット反転された{1}の論理積の計算結果を格納します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT,ParamType.GENERAL_64BIT],description:"{2}に{0}とビット反転された{1}の論理積の計算結果を格納します。"}
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.SF,FlagBit.ZF,FlagBit.OF,FlagBit.CF],
+		desc: '論理AND NOT'
 	},
-	'': {
+	'andnpd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}と{1}内のパックされたdouble値の論理積のビット反転を計算します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた倍精度浮動小数点値のビット単位の論理AND NOT'
 	},
-	'': {
+	'andnps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}とビット反転された{1}内のパックされたfloat値の論理積を計算します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた単精度浮動小数点値のビット単位の論理AND NOT'
 	},
-	'': {
+	'andpd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}と{1}内のパックされたdouble値の論理積を計算します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた倍精度浮動小数点値のビット単位の論理AND'
 	},
-	'': {
+	'andps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}と{1}内のパックされたfloat値の論理積を計算します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた単精度浮動小数点値のビット単位の論理AND'
 	},
-	'': {
+	'arpl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.GENERAL_16BIT,ParamType.MEMREG_16BIT],description:"{1}が{0}のRPL以下にならないよう調整する。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF],
+		desc: 'セグメントセレクタのRPLフィールドの調整'
 	},
-	'': {
+	'bextr': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.GENERAL_32BIT,ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"{0}を使用し{1}からビットを抽出し、{2}に格納します。"},
+			{args:[ParamType.GENERAL_64BIT,ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"{0}を使用し{1}からビットを抽出し、{2}に格納します。"}
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.OF,FlagBit.CF],
+		desc: 'ビットフィールド抽出'
 	},
-	'': {
+	'blendpd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.IMMU_8BIT,ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}のマスクデータで{1}と{2}からパックされたdouble値を選択し{2}に格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた倍精度浮動小数点値のブレンド'
 	},
-	'': {
+	'blendps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.IMMU_8BIT,ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}のマスクデータで{1}と{2}からパックされたfloat値を選択し{2}に格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'パックされた単精度浮動小数点値のブレンド'
 	},
-	'': {
+	'blendvpd': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.XMM0,ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}のマスクデータで{1}と{0}からパックされたdouble値を選択し、{1}に格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '可変ブレンドパックされた倍精度浮動小数点値'
 	},
-	'': {
+	'blendvps': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.XMM0,ParamType.MEMXMM_128BIT,ParamType.XMM],description:"{0}のマスクデータで{1}と{0}からパックされたfloat値を選択し、{1}に格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '可変ブレンドパックされた単精度浮動小数点値'
 	},
-	'': {
+	'blsi': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"{0}から最下位セットビットを抽出し{1}に格納します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"{0}から最下位セットビットを抽出し{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.SF,FlagBit.CF,FlagBit.OF],
+		desc: '最下位セット分離ビットの抽出'
 	},
-	'': {
+	'blsmsk': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"{0}の最下位セットビットより下位のビットを\nすべてセットしたマスクを生成し、{1}に格納します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"{0}の最下位セットビットより下位のビットを\nすべてセットしたマスクを生成し、{1}に格納します。"},
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.SF,FlagBit.CF,FlagBit.ZF,FlagBit.OF],
+		desc: '最下位セットビットまでのマスクの取得'
 	},
-	'': {
+	'blsr': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.GENERAL_32BIT],description:"{0}の最下位セットビットをリセットし、{1}に格納します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.GENERAL_64BIT],description:"{0}の最下位セットビットをリセットし、{1}に格納します。"}
 		],
-		flags_affected: [],
-		desc: ''
+		flags_affected: [FlagBit.ZF,FlagBit.SF,FlagBit.CF,FlagBit.OF],
+		desc: '最下位セットビットのリセット'
 	},
-	'': {
+	'bndcl': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.BND],description:"{0}のアドレスが{1}.LBの下限より小さい場合、#BRを生成します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.BND],description:"{0}のアドレスが{1}.LBの下限より小さい場合、#BRを生成します。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '下限のチェック'
 	},
-	'': {
+	'bndcn': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.BND],description:"{0}のアドレスが{1}.UB(bnb.UBを1の補数で表したもの)\nの上限より大きい場合、#BRを生成します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.BND],description:"{0}のアドレスが{1}.UB(bnb.UBを1の補数で表したもの)\nの上限より大きい場合、#BRを生成します。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '上限のチェック'
 	},
-	'': {
+	'bndcu': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMREG_32BIT,ParamType.BND],description:"{0}のアドレスが{1}.UB(bnb.UBを1の補数で表したものではない)\nの上限より大きい場合、#BRを生成します。"},
+			{args:[ParamType.MEMREG_64BIT,ParamType.BND],description:"{0}のアドレスが{1}.UB(bnb.UBを1の補数で表したものではない)\nの上限より大きい場合、#BRを生成します。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '上限のチェック'
 	},
-	'': {
+	'bndldx': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.IMMU_64BIT,ParamType.BND],description:"BTE二格納された境界を{0}のベースを使用して、\nアドレス変換をし{1}にロードします。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'アドレス変換を使用した拡張境界のロード'
 	},
-	'': {
+	'bndmk': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_32BIT,ParamType.BND],description:"{0}から下限と上限を生成し、{1}に格納します。"},
+			{args:[ParamType.MEMORY_64BIT,ParamType.BND],description:"{0}から下限と上限を生成し、{1}に格納します。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '境界の作成'
 	},
-	'': {
+	'bndmov': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMBND_64BIT ,ParamType.BND],description:"下限と上限のboundsを{0}から{1}に移動します。"},
+			{args:[ParamType.MEMBND_128BIT,ParamType.BND],description:"下限と上限のboundsを{0}から{1}に移動します。"},
+			{args:[ParamType.BND,ParamType.MEMBND_64BIT ],description:"下限と上限のboundsを{0}から{1}に移動します。"},
+			{args:[ParamType.BND,ParamType.MEMBND_128BIT],description:"下限と上限のboundsを{0}から{1}に移動します。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '境界の移動'
 	},
-	'': {
+	'bndstx': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.BND,ParamType.IMMU_64BIT],description:"{1}のベースを使用しアドレス変換を行い、\n{1}のインデックスレジスタ内の{0}とポインタ値をBTEに格納します。"},
 		],
 		flags_affected: [],
-		desc: ''
+		desc: 'アドレス変換を使用した拡張境界の格納'
 	},
-	'': {
+	'bound': {
 		args: [
-			{args:[ParamType.IMMU_8BIT   ,ParamType.MEMREG_8BIT ],description:""},
+			{args:[ParamType.MEMORY_16BIT,ParamType.GENERAL_16BIT],description:"{1}が{0}で指定された境界内にあるかチェックする。"},
+			{args:[ParamType.MEMORY_32BIT,ParamType.GENERAL_32BIT],description:"{1}が{0}で指定された境界内にあるかチェックする。"}
 		],
 		flags_affected: [],
-		desc: ''
+		desc: '境界に対する配列インデックスのチェック'
 	},
 	'': {
 		args: [
